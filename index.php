@@ -40,11 +40,11 @@
         }
 
         // Set path to theme index
-        $themeIndex = $lister->getThemePath(true) . '/index.php';
+        $themePage = $lister->getThemePath(true) . '/' . (isset($_GET['detail']) ? 'detail' : 'index') . '.php';
 
         // Initialize the theme
-        if (file_exists($themeIndex)) {
-            include($themeIndex);
+        if (file_exists($themePage)) {
+            include($themePage);
         } else {
             die('ERROR: Failed to initialize theme');
         }

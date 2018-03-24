@@ -1,5 +1,7 @@
 <?php
 
+//TODO: refactor this (this is basically a copy of index.php)
+
 /**
  * https://stackoverflow.com/questions/1993721/how-to-convert-camelcase-to-camel-case
  * @param string $input
@@ -9,6 +11,15 @@ function camelCaseToWords(string $input): string {
     preg_match_all('/([A-Z][A-Z0-9]*(?=$|[A-Z][a-z0-9])|[A-Za-z][a-z0-9]+)/', $input, $matches);
     return implode(' ', $matches[0]);
 }
+
+$filePath = rawurldecode($_GET['detail']);
+$fileName = substr($filePath, strrpos($filePath, '/') + 1);
+$fileContents = file_get_contents($filePath);
+$youtubeId = $lister->getYoutubeId($fileName);
+$youtubeLink = $lister->getYoutubeLink($youtubeId);
+$youtubeEmbed = $lister->getYoutubeEmbed($youtubeId);
+$difficulty = $lister->getDifficulty($fileName);
+
 ?>
 
 <!DOCTYPE html>
@@ -97,81 +108,67 @@ function camelCaseToWords(string $input): string {
                 <?php endforeach; ?>
             <?php endif; ?>
 
-            <div id="directory-list-header">
-                <div class="row">
-                    <div class="col-md-5 col-sm-10">Title / File</div>
-                    <div class="col-md-1">Diff.</div>
-                    <div class="col-md-1">YouTube</div>
-                    <div class="col-md-2 hidden-sm hidden-xs text-right">Size</div>
-                    <div class="col-md-3 hidden-sm hidden-xs text-right">Last Modified</div>
+            <div class="row">
+                <div class="col-md-4 hidden-sm hidden-xs">
+                    <div id="directory-list-header">
+                        <div>
+                            <div>Title / File</div>
+                        </div>
+                    </div>
+
+                    <ul id="directory-listing" class="nav nav-pills nav-stacked">
+
+                        <?php foreach($dirArray as $name => $fileInfo): ?>
+                            <li data-name="<?php echo $name; ?>" data-href="<?php echo $fileInfo['url_path']; ?>">
+                                <a href="<?php echo $fileInfo['url_path']; ?>" class="clearfix" data-name="<?php echo $name; ?>">
+                                    <div class="row">
+                                        <span class="file-name col-xs-12">
+                                            <i class="fa <?php echo $fileInfo['icon_class']; ?> fa-fw"></i>
+                                            <?php echo
+                                            camelCaseToWords(preg_replace('/\-/', ' - ',
+                                                preg_replace('/(__diff_[\d]|__yt_[^_\.]+|\.txt)/', '', $name)
+                                            ));
+                                            ?>
+                                        </span>
+                                    </div>
+                                </a>
+                            </li>
+                        <?php endforeach; ?>
+
+                    </ul>
+                </div>
+                <div class="col-md-8 col-sm-12 col-xs-12">
+                    <h1><?= camelCaseToWords(preg_replace('/\-/', ' - ',
+                            preg_replace('/(__diff_[\d]|__yt_[^_\.]+|\.txt)/', '', $fileName)
+                        )); ?></h1>
+                    <div class="pull-right">
+                        <span class="file-difficulty">
+                            <?php if ($difficulty > 0) { ?>
+                                <i class="
+                                    fa fa-battery-<?= $difficulty - 1 ?>
+                                    text-<?php
+                                if ($difficulty === 5) {
+                                    echo 'danger';
+                                } else if ($difficulty === 4) {
+                                    echo 'warning';
+                                } else if ($difficulty === 1) {
+                                    echo 'success';
+                                }
+                                ?>
+                                "></i>
+                            <?php } ?>
+                        </span>
+                    </div>
+                    <div class="file-youtube">
+                        <?php if ($youtubeEmbed !== '') {
+                            echo $youtubeEmbed;
+                        } ?>
+                    </div>
+                    <div class="content">
+                        <pre><code><?= $fileContents ?></code></pre>
+                    </div>
                 </div>
             </div>
-
-            <ul id="directory-listing" class="nav nav-pills nav-stacked">
-
-                <?php foreach($dirArray as $name => $fileInfo): ?>
-                    <li data-name="<?php echo $name; ?>" data-href="<?php echo $fileInfo['url_path']; ?>">
-                        <a href="<?php echo $fileInfo['url_path']; ?>" class="clearfix" data-name="<?php echo $name; ?>">
-
-
-                            <div class="row">
-                                <span class="file-name col-md-5 col-sm-10">
-                                    <i class="fa <?php echo $fileInfo['icon_class']; ?> fa-fw"></i>
-                                    <?php echo
-                                        camelCaseToWords(preg_replace('/\-/', ' - ',
-                                            preg_replace('/(__diff_[\d]|__yt_[^_\.]+|\.txt)/', '', $name)
-                                        ));
-                                    ?>
-                                </span>
-
-                                <span class="file-difficulty col-md-1">
-                                    <?php if ($fileInfo['difficulty'] > 0) { ?>
-                                        <i class="
-                                            fa fa-battery-<?= $fileInfo['difficulty'] - 1 ?>
-                                            text-<?php
-                                                if ($fileInfo['difficulty'] === 5) {
-                                                    echo 'danger';
-                                                } else if ($fileInfo['difficulty'] === 4) {
-                                                    echo 'warning';
-                                                } else if ($fileInfo['difficulty'] === 1) {
-                                                    echo 'success';
-                                                }
-                                            ?>
-                                        "></i>
-                                    <?php } ?>
-                                </span>
-
-                                <span class="file-youtube col-md-1">
-                                    <?php if ($fileInfo['youtube_link'] !== '') { ?>
-                                        <span onclick="window.open('<?php echo $fileInfo['youtube_link']; ?>', '_blank');return false;">
-                                            <i class="fa fa-youtube fa-fw fa-lg"></i>
-                                        </span>
-                                    <?php } ?>
-                                </span>
-
-                                <span class="file-size col-md-2 hidden-sm hidden-xs text-right">
-                                    <?php echo $fileInfo['file_size']; ?>
-                                </span>
-
-                                <span class="file-modified col-md-3 hidden-sm hidden-xs text-right">
-                                    <?php echo $fileInfo['mod_time']; ?>
-                                </span>
-                            </div>
-
-                        </a>
-
-                        <?php if (is_file($fileInfo['file_path'])): ?>
-
-                            <a href="javascript:void(0)" class="file-info-button">
-                                <i class="fa fa-info-circle"></i>
-                            </a>
-
-                        <?php endif; ?>
-
-                    </li>
-                <?php endforeach; ?>
-
-            </ul>
         </div>
 
         <?php file_exists('footer.php') ? include('footer.php') : include($lister->getThemePath(true) . "/default_footer.php"); ?>

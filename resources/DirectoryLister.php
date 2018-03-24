@@ -613,7 +613,10 @@ class DirectoryLister {
                             'file_size'  => '-',
                             'mod_time'   => date($this->_config['date_format'], filemtime($realPath)),
                             'icon_class' => 'fa-level-up',
-                            'sort'       => 0
+                            'sort'       => 0,
+                            'youtube_link' => '',
+                            'youtube_embed' => '',
+                            'difficulty' => 0
                         );
                     }
 
@@ -629,14 +632,24 @@ class DirectoryLister {
                             $urlPath = $this->containsIndex($relativePath) ? $relativePath : '?dir=' . $urlPath;
                         }
 
+                        if (0 !== preg_match('/\.txt$/i', $relativePath)) {
+                            $directoryPath = substr($relativePath, 0, strpos($relativePath, '/'));
+                            $urlPath = $this->_appURL . '?dir=' . rawurlencode($directoryPath) . '&detail=' . rawurlencode($relativePath);
+                        }
+
                         // Add the info to the main array
-                        $directoryArray[pathinfo($relativePath, PATHINFO_BASENAME)] = array(
+                        $baseName = pathinfo($relativePath, PATHINFO_BASENAME);
+                        $youtubeId = $this->getYoutubeId($baseName);
+                        $directoryArray[$baseName] = array(
                             'file_path'  => $relativePath,
                             'url_path'   => $urlPath,
                             'file_size'  => is_dir($realPath) ? '-' : $this->getFileSize($realPath),
                             'mod_time'   => date($this->_config['date_format'], filemtime($realPath)),
                             'icon_class' => $iconClass,
-                            'sort'       => $sort
+                            'sort'       => $sort,
+                            'youtube_link' => $this->getYoutubeLink($youtubeId),
+                            'youtube_embed' => $this->getYoutubeEmbed($youtubeId),
+                            'difficulty' => $this->getDifficulty($baseName)
                         );
                     }
 
@@ -913,6 +926,65 @@ class DirectoryLister {
         // Return the relative path
         return $relativePath;
 
+    }
+
+    /**
+     * @param string $baseName
+     * @return null|string
+     */
+    public function getYoutubeId(string $baseName): ?string
+    {
+        if (0 !== preg_match('/__yt_[^_]+/i', $baseName)) {
+            return preg_replace('/^.*__yt_([^_\.]+).*$/i', '$1', $baseName);
+        } else {
+            return null;
+        }
+    }
+
+    /**
+     * @param null|string $youtubeId
+     * @return string
+     */
+    public function getYoutubeLink(?string $youtubeId): string
+    {
+        if (null !== $youtubeId) {
+            return 'https://www.youtube.com/watch?v=' . $youtubeId;
+        } else {
+            return '';
+        }
+    }
+
+    /**
+     * @param null|string $youtubeId
+     * @return string
+     */
+    public function getYoutubeEmbed(?string $youtubeId): string
+    {
+        if (null !== $youtubeId) {
+            return '<iframe
+                width="100%"
+                height="400"
+                src="https://www.youtube.com/embed/' . $youtubeId . '?rel=0"
+                frameborder="0"
+                allow="autoplay; encrypted-media"
+                allowfullscreen
+            ></iframe>';
+        } else {
+            return '';
+        }
+    }
+
+    /**
+     * @param string $baseName
+     * @return int|null
+     */
+    public function getDifficulty(string $baseName): int
+    {
+        if (0 !== preg_match('/__diff_[\d]/i', $baseName)) {
+            return (int)preg_replace('/^.*__diff_([\d]).*$/i', '$1', $baseName);
+        } else {
+            return 0;
+        }
     }
 
 }
