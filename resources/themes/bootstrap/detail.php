@@ -15,6 +15,7 @@ function camelCaseToWords(string $input): string {
 $filePath = rawurldecode($_GET['detail']);
 $fileName = substr($filePath, strrpos($filePath, '/') + 1);
 $fileContents = file_get_contents($filePath);
+$fileContents = mb_convert_encoding($fileContents, 'UTF-8', mb_detect_encoding($fileContents, 'UTF-8, ISO-8859-1', true));
 $youtubeId = $lister->getYoutubeId($fileName);
 $youtubeLink = $lister->getYoutubeLink($youtubeId);
 $youtubeEmbed = $lister->getYoutubeEmbed($youtubeId);
